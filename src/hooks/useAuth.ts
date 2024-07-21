@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useEffect } from "react";
 import Swal from "sweetalert2";
 import { POST } from "../services/api";
 import { jwtDecode } from "jwt-decode";
@@ -93,8 +93,6 @@ export async function refreshAccessTokenIfNeeded() {
 
                 if (refresh_token) {
                     const reloadedData = await POST<LoginResponse>("/auth/reload", { refresh_token });
-
-                    console.log({ reloadedData });
 
                     const { access_token } = reloadedData;
 

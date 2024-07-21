@@ -1,7 +1,7 @@
 import "./App.css";
 import useAuth from "./hooks/useAuth";
 import shuffleBackground from "./services/bg";
-import Journals from "./views/Journals";
+import Journals from "./components/Journals";
 
 function App() {
     shuffleBackground();
