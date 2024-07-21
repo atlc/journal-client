@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import { POST } from "../services/api";
+import { jwtDecode } from "jwt-decode";
 
-export const TOKEN_KEY = "access_token";
+export const ACCESS_TOKEN_KEY = "access_token";
+export const REFRESH_TOKEN_KEY = "refresh_token";
 
-interface LoginResponse {
+export interface LoginResponse {
     access_token: string;
     refresh_token: string;
 }
@@ -53,8 +55,8 @@ export const showLoginSwal = (isRegistration: boolean = false) => {
             const { name, email, password } = result.value!;
 
             POST<LoginResponse>(URL, { name, email, password }).then(({ access_token, refresh_token }) => {
-                if (access_token) localStorage.setItem(TOKEN_KEY, access_token);
-                if (refresh_token) localStorage.setItem("refresh_token", refresh_token);
+                if (access_token) localStorage.setItem(ACCESS_TOKEN_KEY, access_token);
+                if (refresh_token) localStorage.setItem(REFRESH_TOKEN_KEY, refresh_token);
             });
         }
     });
@@ -62,10 +64,43 @@ export const showLoginSwal = (isRegistration: boolean = false) => {
 
 export default async function useAuth() {
     useEffect(() => {
-        const token = localStorage.getItem(TOKEN_KEY);
+        const token = localStorage.getItem(ACCESS_TOKEN_KEY);
 
         if (!token) showLoginSwal();
     }, []);
 
     return showLoginSwal;
+}
+
+export async function refreshAccessTokenIfNeeded() {
+    const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+
+    if (token) {
+        const v = jwtDecode(token);
+
+        if (v.exp) {
+            const SECONDS = 1000;
+            const MINUTES = 60 * SECONDS;
+            const expiration = new Date(v.exp * SECONDS).valueOf();
+            const now = new Date().valueOf();
+
+            const is_expired = now - expiration > 0;
+
+            const expires_soon = now - expiration < 2 * MINUTES;
+
+            if (is_expired || expires_soon) {
+                const refresh_token = localStorage.getItem(REFRESH_TOKEN_KEY);
+
+                if (refresh_token) {
+                    const reloadedData = await POST<LoginResponse>("/auth/reload", { refresh_token });
+
+                    console.log({ reloadedData });
+
+                    const { access_token } = reloadedData;
+
+                    if (access_token) localStorage.setItem(ACCESS_TOKEN_KEY, access_token);
+                }
+            }
+        }
+    }
 }
