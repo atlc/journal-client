@@ -2,6 +2,8 @@ import Swal from "sweetalert2";
 import { showLoginSwal, ACCESS_TOKEN_KEY, refreshAccessTokenIfNeeded } from "../../hooks/useAuth";
 
 export async function fetcher<T = any>(path: string, method: string = "GET", rawData?: any) {
+    const path_starts_with_auth = path.startsWith("/auth");
+
     const headers: HeadersInit = {};
 
     const options: RequestInit = {
@@ -14,7 +16,7 @@ export async function fetcher<T = any>(path: string, method: string = "GET", raw
         options["body"] = JSON.stringify(rawData);
     }
 
-    if (path !== "/auth/reload") {
+    if (!path_starts_with_auth) {
         await refreshAccessTokenIfNeeded();
     }
 
@@ -37,12 +39,20 @@ export async function fetcher<T = any>(path: string, method: string = "GET", raw
                     icon: "error",
                     html: data.message,
                 }).then(() => {
-                    if (res.status === 401 || res.status === 403) {
-                        showLoginSwal();
+                    const is_invalid_refresh_token = res.status === 403 && path === "/auth/reload";
+                    const is_general_auth_error = res.status === 401 || res.status === 403;
+                    const is_bad_auth_request = res.status === 400 && path_starts_with_auth;
+
+                    if (is_invalid_refresh_token) {
+                        return showLoginSwal();
                     }
 
-                    if (res.status === 400 && path.startsWith("/auth")) {
-                        showLoginSwal();
+                    if (is_general_auth_error) {
+                        return showLoginSwal();
+                    }
+
+                    if (is_bad_auth_request) {
+                        return showLoginSwal();
                     }
                 });
                 return;
