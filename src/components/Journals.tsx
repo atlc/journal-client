@@ -10,6 +10,7 @@ const Journals = () => {
     const [journals, setJournals] = useState<Journal[]>([]);
     const [filteredJournals, setFilteredJournals] = useState<Journal[]>([]);
     const [filter, setFilter] = useState("");
+    const [sortByNotes, setSortByNotes] = useState<boolean>();
 
     const fetchJournals = () => {
         services.api.journals.load().then((jrnls) => {
@@ -19,13 +20,29 @@ const Journals = () => {
     };
 
     useEffect(() => {
-        const filtered = services.journals.filter({ journals, filter });
+        console.log({ filter, sortByNotes });
+        const filtered = services.journals.filter({ journals, filter, sortByNotes });
         setFilteredJournals(filtered);
-    }, [filter]);
+    }, [filter, sortByNotes]);
 
     useEffect(() => {
         fetchJournals();
     }, []);
+
+    const getWords = (string: string) => {
+        const count = string.split(" ").length;
+
+        return count === 1 ? `${count} word` : `${count} words`;
+    };
+
+    const handleClearFilters = () => {
+        setFilter("");
+        setSortByNotes(undefined);
+    };
+
+    const handleDelete = (id: string) => {
+        services.api.journals.handleDelete(id).then(fetchJournals);
+    };
 
     const handleSubmit = () => {
         services.api.journals.create(content, isNote).then(() => {
@@ -34,14 +51,8 @@ const Journals = () => {
         });
     };
 
-    const handleDelete = (id: string) => {
-        services.api.journals.handleDelete(id).then(fetchJournals);
-    };
-
-    const getWords = (string: string) => {
-        const count = string.split(" ").length;
-
-        return count === 1 ? `${count} word` : `${count} words`;
+    const handleToggle = (id: string, current_status: boolean) => {
+        services.api.journals.toggle(id, !current_status).then(fetchJournals);
     };
 
     return (
@@ -110,23 +121,49 @@ const Journals = () => {
                 }}
             >
                 <div>
-                    <span style={{ fontSize: "1.85rem", marginRight: "10px" }}>🔎</span>
-                    <input
-                        style={{
-                            fontSize: "1.85rem",
-                            marginTop: "5%",
-                            borderRadius: "12px",
-                        }}
-                        type="search"
-                        value={filter}
-                        onChange={(e) => setFilter(e.target.value)}
-                    />
-                    {filter && <p style={{ color: "black" }}>Search results for "{filter}":</p>}
+                    <div style={{ border: "2px solid black", borderRadius: "12px", paddingBottom: "4%" }}>
+                        <span style={{ fontSize: "1.85rem", marginRight: "10px" }}>🔎</span>
+                        <input
+                            style={{
+                                fontSize: "1.85rem",
+                                marginTop: "5%",
+                                borderRadius: "12px",
+                            }}
+                            type="search"
+                            value={filter}
+                            onChange={(e) => setFilter(e.target.value)}
+                        />
+                        <div>
+                            <p style={{ color: "black", margin: "2%" }}>
+                                Sort by special notes?{" "}
+                                <input
+                                    checked={!!sortByNotes}
+                                    onChange={(e) => setSortByNotes(!!e.target.checked)}
+                                    type="checkbox"
+                                />
+                            </p>
+                            <button
+                                onClick={handleClearFilters}
+                                style={{ color: "white", margin: "2%" }}
+                            >
+                                Clear filters?
+                            </button>
+                        </div>
+                    </div>
+                    {filter && (
+                        <p style={{ color: "black" }}>
+                            {filteredJournals.length.toLocaleString()} results for{" "}
+                            {typeof sortByNotes !== "undefined" ? (sortByNotes ? "noted" : "non-note") : ""} entries containing "{filter}":
+                        </p>
+                    )}
                 </div>
 
                 <>
                     {filteredJournals.map((j) => (
-                        <div style={{ width: "80%", border: "2px solid black", borderRadius: "12px", margin: "4%", backgroundColor: "white" }}>
+                        <div
+                            key={j._id}
+                            style={{ width: "80%", border: "2px solid black", borderRadius: "12px", margin: "4%", backgroundColor: "white" }}
+                        >
                             <h2 style={{ color: "black" }}>
                                 {new Date(j.created_at).toDateString()}{" "}
                                 <span
@@ -136,6 +173,13 @@ const Journals = () => {
                                     ❌
                                 </span>
                             </h2>
+                            <h3
+                                style={{ color: "black" }}
+                                onClick={() => handleToggle(j._id, j.is_note)}
+                            >
+                                {j.is_note ? "IS" : "Is NOT"} a special note. Click to toggle 📝
+                            </h3>
+                            <hr />
                             <div>
                                 {j.content.split("\n").map((line, i) => (
                                     <p

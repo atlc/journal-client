@@ -1,5 +1,5 @@
 import Swal from "sweetalert2";
-import { DELETE, GET, POST } from ".";
+import { DELETE, GET, POST, PUT } from ".";
 import { Journal } from "../../types";
 
 const ENDPOINT = "/api/journals";
@@ -7,6 +7,7 @@ const ENDPOINT = "/api/journals";
 const create = (content: string, isNote?: boolean) => POST(ENDPOINT, { content, is_note: isNote });
 const destroy = (id: string) => DELETE(`${ENDPOINT}/${id}`);
 const load = () => GET<Journal[]>(ENDPOINT);
+const toggle = (id: string, is_note: boolean) => PUT(`${ENDPOINT}/${id}/toggle?is_note=${is_note}`, {});
 
 const handleDelete = async (id: string) => {
     return Swal.fire({
@@ -31,5 +32,6 @@ export default {
     create,
     destroy,
     load,
+    toggle,
     handleDelete,
 };
