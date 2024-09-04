@@ -1,41 +1,25 @@
 import { useEffect, useState } from "react";
 import { Journal } from "../types";
-import api from "../services/api";
-import Swal from "sweetalert2";
+import services from "../services";
 
 const MAX_CONTENT_LENGTH = 10_000;
 
 const Journals = () => {
-    const [disabled, setDisabled] = useState(true);
     const [content, setContent] = useState("");
+    const [isNote, setIsNote] = useState<boolean>(false);
     const [journals, setJournals] = useState<Journal[]>([]);
     const [filteredJournals, setFilteredJournals] = useState<Journal[]>([]);
     const [filter, setFilter] = useState("");
 
-    const fetchJournals = () =>
-        api.journals.load().then((jrnls) => {
+    const fetchJournals = () => {
+        services.api.journals.load().then((jrnls) => {
             setJournals(jrnls);
             setFilteredJournals(jrnls);
         });
+    };
 
     useEffect(() => {
-        setDisabled(content.length < 12);
-    }, [content]);
-
-    useEffect(() => {
-        if (filter === "") {
-            setFilteredJournals(journals);
-            return;
-        }
-
-        const filtered = journals.filter((j) => {
-            const contentMatches = j.content.toLowerCase().includes(filter.toLowerCase());
-            const dateMatches = new Date(j.created_at).toDateString().toLowerCase().includes(filter.toLowerCase());
-
-            console.log({ contentMatches, dateMatches, j });
-
-            return contentMatches || dateMatches;
-        });
+        const filtered = services.journals.filter({ journals, filter });
         setFilteredJournals(filtered);
     }, [filter]);
 
@@ -44,32 +28,14 @@ const Journals = () => {
     }, []);
 
     const handleSubmit = () => {
-        setDisabled(true);
-        api.journals.create(content).then(() => {
+        services.api.journals.create(content, isNote).then(() => {
             fetchJournals();
-            setDisabled(false);
             setContent("");
         });
     };
 
     const handleDelete = (id: string) => {
-        Swal.fire({
-            title: "Are you sure you want to delete this journal?",
-            text: "This action is PERMANENT, the journal cannot be recovered.",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonColor: "#3085d6",
-            cancelButtonColor: "#d33",
-            confirmButtonText: "Yes, delete it!",
-            cancelButtonText: "No, cancel!",
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                api.journals.destroy(id).then(() => {
-                    fetchJournals();
-                    Swal.fire("Deleted!", "Your journal has been deleted successfully", "success");
-                });
-            }
-        });
+        services.api.journals.handleDelete(id).then(fetchJournals);
     };
 
     const getWords = (string: string) => {
@@ -80,6 +46,7 @@ const Journals = () => {
 
     return (
         <div>
+            {/* New Journal Input Panel */}
             <div
                 style={{
                     display: "flex",
@@ -93,7 +60,7 @@ const Journals = () => {
                 }}
             >
                 <textarea
-                    style={{ width: "60%", fontSize: "1.5rem", fontFamily: " Inter, system-ui, Avenir, Helvetica, Arial, sans-serif", borderRadius: "12px" }}
+                    style={{ width: "60%", fontSize: "1.5rem", fontFamily: "Inter, system-ui, Avenir, Helvetica, Arial, sans-serif", borderRadius: "12px" }}
                     value={content}
                     rows={7}
                     maxLength={MAX_CONTENT_LENGTH}
@@ -101,8 +68,8 @@ const Journals = () => {
                 />
                 <button
                     onClick={handleSubmit}
-                    style={{ color: "white", backgroundColor: disabled ? "#690f0f" : "#0f690f" }}
-                    disabled={disabled}
+                    style={{ color: "white", backgroundColor: content.length < 12 ? "#690f0f" : "#0f690f", marginLeft: "1%" }}
+                    disabled={content.length < 12}
                 >
                     {`Submit Journal Entry`.split(" ").map((word) => (
                         <span
@@ -117,8 +84,18 @@ const Journals = () => {
                     </span>
                     <span style={{ display: "block", marginTop: "3px" }}>{getWords(content)}</span>
                 </button>
+
+                <button
+                    onClick={() => setIsNote(!isNote)}
+                    style={{ color: "white", backgroundColor: isNote ? "#0f690fB3" : "#690f0fB3", marginLeft: "1%" }}
+                >
+                    <p>Is this a note?</p>
+                    <p>Currently "{isNote ? "yes" : "no"}".</p>
+                    <p>Click me to switch</p>
+                </button>
             </div>
 
+            {/* Journals Panel with Searchbar */}
             <div
                 style={{
                     display: "flex",

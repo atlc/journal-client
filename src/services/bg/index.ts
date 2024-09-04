@@ -1,6 +1,6 @@
 import api from "../api";
 
-export default async function shuffleBackground() {
+async function shuffleBackground() {
     const urls = await api.images.getImageURLs();
 
     document.body.style.opacity = "0.8";
@@ -24,3 +24,7 @@ export default async function shuffleBackground() {
         });
     }, 20000);
 }
+
+export default {
+    shuffleBackground,
+};

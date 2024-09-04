@@ -1,10 +1,10 @@
 import "./App.css";
 import useAuth from "./hooks/useAuth";
-import shuffleBackground from "./services/bg";
+import services from "./services";
 import Journals from "./components/Journals";
 
 function App() {
-    shuffleBackground();
+    services.bg.shuffleBackground();
     useAuth();
 
     return (
